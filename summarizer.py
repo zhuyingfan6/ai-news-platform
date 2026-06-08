@@ -1,23 +1,3 @@
-import os
-import streamlit as st
-from openai import OpenAI
-
-# ---------- 智能获取 API Key ----------
-def get_api_key():
-    try:
-        api_key = st.secrets.get("DEEPSEEK_API_KEY")
-        if api_key:
-            return api_key
-    except Exception:
-        pass
-    api_key = os.environ.get("DEEPSEEK_API_KEY")
-    if not api_key:
-        raise ValueError("未找到 DEEPSEEK_API_KEY。")
-    return api_key
-
-api_key = get_api_key()
-client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
-
 def summarize_daily_news(articles, language="zh"):
     if not articles:
         return "今日无新闻。" if language == "zh" else "No news today."
