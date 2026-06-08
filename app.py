@@ -186,10 +186,7 @@ with tab1:
         suffix = "_zh.md" if is_zh else "_en.md"
         lang_files = [f for f in files if f.endswith(suffix)]
         if lang_files:
-            # 自定义显示格式：只显示日期部分（例如 "2026-06-08"）
-            def format_date(filename):
-                return filename.split('_')[0]  # 去掉 _zh.md 或 _en.md
-            selected_file = st.selectbox(select_date_label, lang_files, format_func=format_date)
+            selected_file = st.selectbox(select_date_label, lang_files, format_func=lambda x: x.split('_')[0])
             if selected_file:
                 file_path = BRIEF_DIR / selected_file
                 with open(file_path, "r", encoding="utf-8") as f:
