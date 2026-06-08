@@ -3,10 +3,78 @@ import PyPDF2
 import docx
 import os
 import pathlib
+import markdown
 from summarizer import extract_key_points_from_report
 from fpdf import FPDF
 
 st.set_page_config(page_title="AI 供应链新闻整理平台", layout="wide")
+
+# ---------- 自定义 CSS 美化 ----------
+st.markdown("""
+<style>
+    .brief-card {
+        background: linear-gradient(135deg, #f5f7fa 0%, #ffffff 100%);
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: 1px solid rgba(0,0,0,0.05);
+        margin: 1rem 0;
+    }
+    .brief-card h1 {
+        color: #1e3c72;
+        border-left: 5px solid #ff6b35;
+        padding-left: 20px;
+        margin-top: 0;
+        font-size: 2.2rem;
+    }
+    .brief-card h2 {
+        color: #2c3e50;
+        background: rgba(255,107,53,0.1);
+        display: inline-block;
+        padding: 0.3rem 1rem;
+        border-radius: 30px;
+        font-size: 1.5rem;
+        margin-top: 1.5rem;
+    }
+    .brief-card h3 {
+        color: #34495e;
+        margin-top: 1rem;
+        font-weight: 600;
+    }
+    .brief-card ul, .brief-card ol {
+        background: #f9f9f9;
+        padding: 1rem 1rem 1rem 2rem;
+        border-radius: 12px;
+        margin: 1rem 0;
+    }
+    .brief-card li {
+        margin: 0.5rem 0;
+        line-height: 1.5;
+    }
+    .brief-card a {
+        color: #ff6b35;
+        text-decoration: none;
+        border-bottom: 1px dotted;
+    }
+    .brief-card a:hover {
+        color: #d95b2a;
+        border-bottom: 1px solid;
+    }
+    .brief-card hr {
+        margin: 1.5rem 0;
+        border: none;
+        height: 2px;
+        background: linear-gradient(to right, #ff6b35, #f5f7fa);
+    }
+    .brief-date {
+        font-size: 0.9rem;
+        color: #7f8c8d;
+        text-align: right;
+        margin-bottom: 1rem;
+        font-family: monospace;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 # ---------- 使用绝对路径定位简报目录 ----------
 APP_DIR = pathlib.Path(__file__).parent
@@ -111,7 +179,6 @@ with tab1:
     st.caption(tab1_caption)
     
     if BRIEF_DIR.exists():
-        # 列出所有符合当前语言的文件
         files = [f.name for f in BRIEF_DIR.iterdir() if f.is_file()]
         files.sort(reverse=True)
         suffix = "_zh.md" if is_zh else "_en.md"
@@ -121,7 +188,18 @@ with tab1:
             if selected_file:
                 file_path = BRIEF_DIR / selected_file
                 with open(file_path, "r", encoding="utf-8") as f:
-                    st.markdown(f.read())
+                    md_content = f.read()
+                
+                # Convert markdown to HTML and wrap in fancy card
+                html_content = markdown.markdown(md_content, extensions=['extra'])
+                date_part = selected_file.split('_')[0]
+                fancy_html = f"""
+                <div class="brief-card">
+                    <div class="brief-date">📅 {date_part}</div>
+                    {html_content}
+                </div>
+                """
+                st.markdown(fancy_html, unsafe_allow_html=True)
         else:
             st.info(no_brief_yet)
     else:
