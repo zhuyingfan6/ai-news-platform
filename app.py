@@ -132,7 +132,7 @@ else:
     warning_font = "Chinese font not found, PDF may not display Chinese correctly."
     brief_dir_warning = "Brief directory not created."
 
-# ---------- PDF 生成函数（支持传入多语言警告消息） ----------
+# ---------- PDF 生成函数（修正参数） ----------
 def markdown_to_pdf(md_text, font_warning_msg):
     """将 Markdown 文本转为 PDF 字节数据"""
     pdf = FPDF(format='A4')
@@ -192,7 +192,7 @@ with tab1:
                 with open(file_path, "r", encoding="utf-8") as f:
                     md_content = f.read()
                 
-                # Convert markdown to HTML and wrap in fancy card
+                # 将 Markdown 转换为 HTML 并嵌入卡片
                 html_content = markdown.markdown(md_content, extensions=['extra'])
                 date_part = selected_file.split('_')[0]
                 fancy_html = f"""
@@ -261,7 +261,7 @@ with tab2:
                     mime="text/markdown"
                 )
                 
-                # PDF 下载（传入多语言警告消息）
+                # PDF 下载（传入 warning_font）
                 try:
                     pdf_bytes = markdown_to_pdf(result, warning_font)
                     pdf_filename = f"{uploaded_file.name}_summary.pdf"
