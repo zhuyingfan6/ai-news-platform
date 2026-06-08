@@ -9,7 +9,7 @@ from fpdf import FPDF
 
 st.set_page_config(page_title="AI 供应链新闻整理平台", layout="wide")
 
-# ---------- 自定义 CSS 美化 ----------
+# ---------- 自定义 CSS 美化（保留原始列表和链接样式） ----------
 st.markdown("""
 <style>
     .brief-card {
@@ -41,24 +41,26 @@ st.markdown("""
         margin-top: 1rem;
         font-weight: 600;
     }
+    /* 保持列表原始样式：无背景，标准圆点，默认缩进 */
     .brief-card ul, .brief-card ol {
-        background: #f9f9f9;
-        padding: 1rem 1rem 1rem 2rem;
-        border-radius: 12px;
-        margin: 1rem 0;
+        background: transparent;
+        padding-left: 2rem;
+        margin: 0.5rem 0;
+        border-radius: 0;
     }
     .brief-card li {
-        margin: 0.5rem 0;
+        margin: 0.25rem 0;
+        list-style-type: disc;
         line-height: 1.5;
     }
+    /* 保持链接原始样式：蓝色下划线 */
     .brief-card a {
-        color: #ff6b35;
-        text-decoration: none;
-        border-bottom: 1px dotted;
+        color: #0066cc;
+        text-decoration: underline;
+        border-bottom: none;
     }
     .brief-card a:hover {
-        color: #d95b2a;
-        border-bottom: 1px solid;
+        color: #004499;
     }
     .brief-card hr {
         margin: 1.5rem 0;
