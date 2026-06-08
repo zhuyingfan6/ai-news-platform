@@ -1,13 +1,42 @@
 import os
+import streamlit as st
 from openai import OpenAI
 
-client = OpenAI(
-    api_key=os.environ.get("DEEPSEEK_API_KEY"),
-    base_url="https://api.deepseek.com"
-)
+# ---------- 智能获取 API Key ----------
+# 优先级: Streamlit secrets > 环境变量
+def get_api_key():
+    # 尝试从 Streamlit secrets 读取
+    try:
+        api_key = st.secrets.get("DEEPSEEK_API_KEY")
+        if api_key:
+            return api_key
+    except Exception:
+        pass  # 不在 Streamlit 环境中时忽略
+    
+    # 回退到环境变量
+    api_key = os.environ.get("DEEPSEEK_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "未找到 DEEPSEEK_API_KEY。请在 Streamlit secrets 或环境变量中设置。"
+        )
+    return api_key
+
+# 初始化客户端
+try:
+    api_key = get_api_key()
+    client = OpenAI(
+        api_key=api_key,
+        base_url="https://api.deepseek.com"
+    )
+except Exception as e:
+    client = None
+    print(f"警告: OpenAI 客户端初始化失败 - {e}")
 
 def summarize_daily_news(articles, language="zh"):
     """根据语言生成每日新闻简报。language: 'zh' 或 'en'"""
+    if not client:
+        return "错误: AI 客户端未初始化，请检查 API Key 配置。" if language == "zh" else "Error: AI client not initialized. Check API key."
+    
     if not articles:
         return "今日无新闻。" if language == "zh" else "No news today."
     
@@ -48,9 +77,11 @@ News list:
     except Exception as e:
         return f"AI 总结出错 / Error: {e}"
 
-
 def extract_key_points_from_report(report_text, language="zh"):
     """根据语言对上传的报告进行重点提取。language: 'zh' 或 'en'"""
+    if not client:
+        return "错误: AI 客户端未初始化，请检查 API Key 配置。" if language == "zh" else "Error: AI client not initialized. Check API key."
+    
     if language == "zh":
         system_prompt = "你是一个顶尖的供应链管理咨询顾问。"
         user_prompt = f"""请对以下这份供应链行业报告进行专业整理，要求：
