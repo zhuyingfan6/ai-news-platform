@@ -2,10 +2,15 @@ import streamlit as st
 import PyPDF2
 import docx
 import os
+import pathlib
 from summarizer import extract_key_points_from_report
 from fpdf import FPDF
 
 st.set_page_config(page_title="AI 供应链新闻整理平台", layout="wide")
+
+# ---------- 使用绝对路径定位简报目录 ----------
+APP_DIR = pathlib.Path(__file__).parent
+BRIEF_DIR = APP_DIR / "daily_briefs"
 
 # ---------- 侧边栏语言选择 ----------
 lang = st.sidebar.selectbox("Language / 语言", ["中文", "English"])
@@ -57,6 +62,45 @@ else:
     warning_font = "Chinese font not found, PDF may not display Chinese correctly."
     brief_dir_warning = "Brief directory not created."
 
+# ---------- PDF 生成函数（支持传入多语言警告消息） ----------
+def markdown_to_pdf(md_text, font_warning_msg):
+    """将 Markdown 文本转为 PDF 字节数据"""
+    pdf = FPDF(format='A4')
+    pdf.set_margins(left=15, top=15, right=15)
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    
+    # 尝试加载中文字体（仅当系统存在时）
+    font_path = None
+    possible_fonts = [
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        "/System/Library/Fonts/PingFang.ttc",
+        "/Library/Fonts/Arial Unicode.ttf",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        "/System/Library/Fonts/Hiragino Sans GB.ttc"
+    ]
+    for path in possible_fonts:
+        if os.path.exists(path):
+            font_path = path
+            break
+    if font_path:
+        pdf.add_font("ChineseFont", "", font_path, uni=True)
+        pdf.set_font("ChineseFont", "", 10)
+    else:
+        pdf.set_font("Helvetica", "", 10)
+        st.warning(font_warning_msg)
+    
+    import re
+    def break_long_words(text, max_len=80):
+        return re.sub(
+            r'\S{' + str(max_len) + ',}',
+            lambda m: ' '.join([m.group(0)[i:i+max_len] for i in range(0, len(m.group(0)), max_len)]),
+            text
+        )
+    processed_text = break_long_words(md_text, 80)
+    pdf.write(h=5, txt=processed_text)
+    return bytes(pdf.output(dest='S'))
+
 # ---------- 主界面 ----------
 st.title(title)
 
@@ -65,16 +109,18 @@ tab1, tab2 = st.tabs([tab1_name, tab2_name])
 with tab1:
     st.header(tab1_header)
     st.caption(tab1_caption)
-    brief_dir = "daily_briefs"
-    if os.path.exists(brief_dir):
-        files = sorted(os.listdir(brief_dir), reverse=True)
-        # 根据语言过滤文件（_zh 或 _en）
+    
+    if BRIEF_DIR.exists():
+        # 列出所有符合当前语言的文件
+        files = [f.name for f in BRIEF_DIR.iterdir() if f.is_file()]
+        files.sort(reverse=True)
         suffix = "_zh.md" if is_zh else "_en.md"
         lang_files = [f for f in files if f.endswith(suffix)]
         if lang_files:
             selected_file = st.selectbox(select_date_label, lang_files)
             if selected_file:
-                with open(os.path.join(brief_dir, selected_file), "r", encoding="utf-8") as f:
+                file_path = BRIEF_DIR / selected_file
+                with open(file_path, "r", encoding="utf-8") as f:
                     st.markdown(f.read())
         else:
             st.info(no_brief_yet)
@@ -93,7 +139,9 @@ with tab2:
             if file_type == "pdf":
                 pdf_reader = PyPDF2.PdfReader(uploaded_file)
                 for page in pdf_reader.pages:
-                    text += page.extract_text() + "\n"
+                    page_text = page.extract_text()
+                    if page_text:
+                        text += page_text + "\n"
             elif file_type == "docx":
                 doc = docx.Document(uploaded_file)
                 for para in doc.paragraphs:
@@ -102,6 +150,7 @@ with tab2:
                 text = uploaded_file.getvalue().decode("utf-8")
             else:
                 st.error(error_unsupported)
+                st.stop()
         except Exception as e:
             st.error(f"{error_file_read}{e}")
             st.stop()
@@ -114,7 +163,11 @@ with tab2:
             
             if st.button(analyze_btn):
                 with st.spinner(analyzing_spinner):
-                    result = extract_key_points_from_report(text, language="zh" if is_zh else "en")
+                    try:
+                        result = extract_key_points_from_report(text, language="zh" if is_zh else "en")
+                    except Exception as e:
+                        st.error(f"AI 分析失败 / AI analysis failed: {e}")
+                        st.stop()
                 st.success(done_msg)
                 st.markdown(result)
                 
@@ -128,9 +181,9 @@ with tab2:
                     mime="text/markdown"
                 )
                 
-                # PDF 下载（调用之前的函数）
+                # PDF 下载（传入多语言警告消息）
                 try:
-                    pdf_bytes = markdown_to_pdf(result)
+                    pdf_bytes = markdown_to_pdf(result, warning_font)
                     pdf_filename = f"{uploaded_file.name}_summary.pdf"
                     st.download_button(
                         label=download_pdf_label,
@@ -140,42 +193,3 @@ with tab2:
                     )
                 except Exception as e:
                     st.error(f"PDF 生成失败 / PDF generation failed: {e}")
-
-# ---------- PDF 生成函数（和之前一样，放在文件底部） ----------
-def markdown_to_pdf(md_text):
-    """将 Markdown 文本转为 PDF 字节数据"""
-    pdf = FPDF(format='A4')
-    pdf.set_margins(left=15, top=15, right=15)
-    pdf.set_auto_page_break(auto=True, margin=15)
-    pdf.add_page()
-    
-    import glob
-    font_path = None
-    possible_fonts = [
-        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
-        "/System/Library/Fonts/PingFang.ttc",
-        "/Library/Fonts/Arial Unicode.ttf",
-        "/System/Library/Fonts/STHeiti Light.ttc",
-        "/System/Library/Fonts/Hiragino Sans GB.ttc"
-    ]
-    for path in possible_fonts:
-        if os.path.exists(path):
-            font_path = path
-            break
-    if font_path:
-        pdf.add_font("ChineseFont", "", font_path, uni=True)
-        pdf.set_font("ChineseFont", "", 10)
-    else:
-        pdf.set_font("Helvetica", "", 10)
-        st.warning(warning_font)
-    
-    import re
-    def break_long_words(text, max_len=80):
-        return re.sub(
-            r'\S{' + str(max_len) + ',}',
-            lambda m: ' '.join([m.group(0)[i:i+max_len] for i in range(0, len(m.group(0)), max_len)]),
-            text
-        )
-    processed_text = break_long_words(md_text, 80)
-    pdf.write(h=5, txt=processed_text)
-    return bytes(pdf.output(dest='S'))
