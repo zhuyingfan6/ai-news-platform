@@ -34,9 +34,6 @@ except Exception as e:
 
 def summarize_daily_news(articles, language="zh"):
     """根据语言生成每日新闻简报。language: 'zh' 或 'en'"""
-    if not client:
-        return "错误: AI 客户端未初始化，请检查 API Key 配置。" if language == "zh" else "Error: AI client not initialized. Check API key."
-    
     if not articles:
         return "今日无新闻。" if language == "zh" else "No news today."
     
@@ -46,19 +43,21 @@ def summarize_daily_news(articles, language="zh"):
     
     if language == "zh":
         system_prompt = "你是一个专业的供应链新闻编辑。"
-        user_prompt = f"""请根据以下今日新闻列表，生成一份简洁的每日供应链新闻简报（中文），包括：
-1. 总体概要（1-2句）；
-2. 按主题分类的重点新闻摘要，每条新闻用简短的 bullet point 说明关键信息；
-3. 重要的原文链接。
+        user_prompt = f"""请根据以下今日新闻列表，生成一份简洁的每日供应链新闻简报（中文）。要求：
+1. 总体概要（1-2句）。
+2. 按主题分类的重点新闻摘要。每条新闻用一个短 bullet point（以 "- " 开头），每个 bullet point 末尾必须紧跟一个 " [Read more](链接)" 格式的链接。
+3. 绝对不要出现单独的“原文链接”列表或任何额外的链接汇总。
+4. 每个 bullet point 单独成行，保持清晰缩进。
 
 新闻列表：
 {news_text}"""
     else:  # English
         system_prompt = "You are a professional supply chain news editor."
-        user_prompt = f"""Based on the following daily news list, generate a concise supply chain news brief in English, including:
-1. Overall summary (1-2 sentences);
-2. Key news points organized by topic, each with a short bullet point;
-3. Important original links.
+        user_prompt = f"""Based on the following daily news list, generate a concise supply chain news brief in English. Requirements:
+1. Overall summary (1-2 sentences).
+2. Key news points organized by topic, each as a single bullet point (starting with "- "). Immediately after each bullet point, include a " [Read more](link)".
+3. Do NOT create a separate "Original links" section or any other link list.
+4. Each bullet point on its own line, proper indentation.
 
 News list:
 {news_text}"""
