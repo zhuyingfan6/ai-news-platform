@@ -1,4 +1,28 @@
+import os
+import streamlit as st
+from openai import OpenAI
+
+# ---------- 智能获取 API Key ----------
+def get_api_key():
+    try:
+        # Streamlit Cloud secrets
+        api_key = st.secrets.get("DEEPSEEK_API_KEY")
+        if api_key:
+            return api_key
+    except Exception:
+        pass
+    # Local environment variable
+    api_key = os.environ.get("DEEPSEEK_API_KEY")
+    if not api_key:
+        raise ValueError("DEEPSEEK_API_KEY not found in secrets or environment")
+    return api_key
+
+# Initialize client
+api_key = get_api_key()
+client = OpenAI(api_key=api_key, base_url="https://api.deepseek.com")
+
 def summarize_daily_news(articles, language="zh"):
+    """Generate daily news brief."""
     if not articles:
         return "今日无新闻。" if language == "zh" else "No news today."
     
@@ -17,7 +41,7 @@ def summarize_daily_news(articles, language="zh"):
 
 新闻列表：
 {news_text}"""
-    else:  # English
+    else:
         system_prompt = "You are a professional supply chain news editor. Output must be strict Markdown."
         user_prompt = f"""Based on the following daily news list, generate a concise supply chain news brief in English. Strict requirements:
 
@@ -45,3 +69,40 @@ News list:
         return response.choices[0].message.content
     except Exception as e:
         return f"AI 总结出错 / Error: {e}"
+
+def extract_key_points_from_report(report_text, language="zh"):
+    """Extract key points from uploaded report."""
+    if language == "zh":
+        system_prompt = "你是一个顶尖的供应链管理咨询顾问。"
+        user_prompt = f"""请对以下这份供应链行业报告进行专业整理，要求：
+1. 提取报告的核心主题和关键结论；
+2. 罗列所有重要的数据、趋势和观点，用清晰的层次结构呈现；
+3. 给出3-5个 actionable 的要点或风险提示；
+4. 全文用中文输出，但保留关键英文术语。
+
+报告内容：
+{report_text}"""
+    else:
+        system_prompt = "You are a top supply chain management consultant."
+        user_prompt = f"""Please analyze the following supply chain industry report and provide a structured summary in English:
+1. Extract the core themes and key conclusions;
+2. List all important data, trends, and insights in a clear hierarchical structure;
+3. Provide 3-5 actionable recommendations or risk alerts;
+4. Keep any critical industry terms in their original language if necessary.
+
+Report content:
+{report_text}"""
+    
+    try:
+        response = client.chat.completions.create(
+            model="deepseek-chat",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.2,
+            max_tokens=2500
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"AI 分析出错 / Error: {e}"
